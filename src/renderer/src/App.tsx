@@ -1,6 +1,8 @@
 import { HashRouter, Navigate, Route, Routes, useLocation, useNavigate } from 'react-router-dom'
 import { AppSidebar, type NavKey } from '@/components/app-sidebar'
 import { OsuLauncher } from '@/components/osu-launcher'
+import { OsuProvider } from '@/contexts/osu-context'
+import { ThemeProvider } from '@/contexts/theme-context'
 import { SidebarInset, SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import BmPage from '@/components/pages/bm'
 import HomePage from '@/components/pages/home'
@@ -66,9 +68,13 @@ function Shell(): React.JSX.Element {
 
 function App(): React.JSX.Element {
   return (
-    <HashRouter>
-      <Shell />
-    </HashRouter>
+    <ThemeProvider>
+      <OsuProvider>
+        <HashRouter>
+          <Shell />
+        </HashRouter>
+      </OsuProvider>
+    </ThemeProvider>
   )
 }
 

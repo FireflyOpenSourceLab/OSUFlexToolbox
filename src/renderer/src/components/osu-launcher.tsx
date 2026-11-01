@@ -1,6 +1,6 @@
-import { useEffect, useState } from 'react'
+import { useState } from 'react'
 import { Loader2, Play } from 'lucide-react'
-import type { OsuInstance } from '../../../shared/osu'
+import { useOsu } from '@/contexts/osu-context'
 import { Button } from '@/components/ui/button'
 import {
   Select,
@@ -12,42 +12,20 @@ import {
 
 /**
  * 标题栏右端的 osu! 启动器：下拉切换实例 + Play 启动。
- * 实例由主进程探测（Windows: lazer + stable；macOS: 仅 lazer）。
+ * 实例由主进程探测（Windows: lazer + stable；macOS: 仅 lazer），
+ * 选中状态放在 OsuProvider 里，主页仪表盘共用同一份。
  */
 export function OsuLauncher(): React.JSX.Element {
-  const [instances, setInstances] = useState<OsuInstance[]>([])
-  const [selected, setSelected] = useState('')
-  const [loading, setLoading] = useState(true)
+  const { instances, selected, select, detecting } = useOsu()
   const [launching, setLaunching] = useState(false)
   const [error, setError] = useState<string | null>(null)
-
-  useEffect(() => {
-    let cancelled = false
-    window.api.osu
-      .detect()
-      .then((found) => {
-        if (cancelled) return
-        setInstances(found)
-        // 默认选中第一个探测到的实例
-        if (found[0]) setSelected(found[0].executable)
-      })
-      .catch((err: unknown) => {
-        if (!cancelled) setError(err instanceof Error ? err.message : '探测 osu! 失败')
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false)
-      })
-    return () => {
-      cancelled = true
-    }
-  }, [])
 
   const handleLaunch = async (): Promise<void> => {
     if (!selected || launching) return
     setLaunching(true)
     setError(null)
     try {
-      const err = await window.api.osu.launch(selected)
+      const err = await window.api.osu.launch(selected.executable)
       if (err) setError(err)
     } catch (err: unknown) {
       setError(err instanceof Error ? err.message : '启动失败')
@@ -58,9 +36,13 @@ export function OsuLauncher(): React.JSX.Element {
 
   return (
     <div className="flex items-center gap-1.5">
-      <Select value={selected} onValueChange={setSelected} disabled={instances.length === 0}>
+      <Select
+        value={selected?.executable ?? ''}
+        onValueChange={select}
+        disabled={instances.length === 0}
+      >
         <SelectTrigger size="sm" className="h-7 w-[132px] text-xs">
-          <SelectValue placeholder={loading ? '探测中…' : '未检测到 osu!'} />
+          <SelectValue placeholder={detecting ? '探测中…' : '未检测到 osu!'} />
         </SelectTrigger>
         <SelectContent>
           {instances.map((inst) => (

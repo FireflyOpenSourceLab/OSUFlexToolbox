@@ -1,8 +1,14 @@
-import { app, shell, BrowserWindow, ipcMain } from 'electron'
+import { app, nativeTheme, shell, BrowserWindow, ipcMain } from 'electron'
 import { join } from 'path'
 import { electronApp, optimizer, is } from '@electron-toolkit/utils'
 import icon from '../../resources/icon.png?asset'
-import { detectOsuInstances, launchOsu } from './osu'
+import {
+  detectOsuInstances,
+  getBeatmapStats,
+  getDiskTotal,
+  getPlayHeatmap,
+  launchOsu
+} from './osu'
 
 // 自定义标题栏高度（三平台统一），同时决定 WCO 控件覆盖层高度
 const TITLE_BAR_HEIGHT = 40
@@ -10,8 +16,11 @@ const TITLE_BAR_HEIGHT = 40
 function createWindow(): void {
   // Create the browser window.
   const mainWindow = new BrowserWindow({
-    width: 900,
-    height: 670,
+    width: 1600,
+    height: 900,
+    // 仪表盘含 53 周热力图，再小就排不下
+    minWidth: 1600,
+    minHeight: 900,
     show: false,
     autoHideMenuBar: true,
     // 隐藏系统标题栏，内容延伸到窗口顶部
@@ -69,6 +78,28 @@ app.whenReady().then(() => {
   // osu! 实例探测 / 启动
   ipcMain.handle('osu:detect', () => detectOsuInstances())
   ipcMain.handle('osu:launch', (_event, executable: string) => launchOsu(executable))
+
+  // 谱面统计 / 磁盘容量：只认探测结果里的实例，不让渲染层指定任意目录
+  const resolveInstance = (executable: string) => {
+    const inst = detectOsuInstances().find((i) => i.executable === executable)
+    if (!inst) throw new Error(`未找到 osu! 实例：${executable}`)
+    return inst
+  }
+  ipcMain.handle('osu:beatmaps', (_event, executable: string) =>
+    getBeatmapStats(resolveInstance(executable))
+  )
+  ipcMain.handle('osu:disk', async (_event, executable: string) => ({
+    totalBytes: await getDiskTotal(resolveInstance(executable))
+  }))
+  ipcMain.handle('osu:heatmap', (_event, executable: string) =>
+    getPlayHeatmap(resolveInstance(executable))
+  )
+
+  // 让 OS 层窗口控件（Windows 三大件）跟随应用内的亮暗色，避免应用暗色而按钮还是亮色
+  ipcMain.handle('theme:set', (_event, theme: 'system' | 'light' | 'dark') => {
+    nativeTheme.themeSource = theme
+    return nativeTheme.shouldUseDarkColors
+  })
 
   createWindow()
 

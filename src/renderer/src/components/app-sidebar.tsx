@@ -1,4 +1,5 @@
 import { House, Library, Music, Palette, Settings } from 'lucide-react'
+import { ThemeDialog } from '@/components/theme-dialog'
 import {
   Sidebar,
   SidebarContent,
@@ -69,6 +70,10 @@ export function AppSidebar({
               <Settings />
               <span>设置</span>
             </SidebarMenuButton>
+          </SidebarMenuItem>
+          {/* 亮暗色切换入口，点开对话框里选 */}
+          <SidebarMenuItem>
+            <ThemeDialog />
           </SidebarMenuItem>
         </SidebarMenu>
       </SidebarFooter>
